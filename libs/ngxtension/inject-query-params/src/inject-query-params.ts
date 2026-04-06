@@ -31,22 +31,7 @@ export type QueryParamsOptions<ReadT, DefaultValueT> = ParseOptions<
 > &
 	DefaultValueOptions<DefaultValueT> &
 	InjectorOptions &
-	RequiredOptions & {
-		/**
-		 * The initial value to use if the query parameter is not present or undefined.
-		 *
-		 * @deprecated Use `defaultValue` as a replacement.
-		 */
-		initialValue?: DefaultValueT;
-		/**
-		 * A transformation function to convert the written value to the expected read value.
-		 *
-		 * @deprecated Use `parse` as a replacement.
-		 * @param v - The value to transform.
-		 * @returns The transformed value.
-		 */
-		transform?: (v: string | null) => ReadT;
-	};
+	RequiredOptions;
 
 /**
  * The `injectQueryParams` function allows you to access and manipulate query parameters from the current route.
@@ -125,7 +110,7 @@ export function injectQueryParams<ReadT>(
 		const route = inject(ActivatedRoute);
 		const queryParams = route.snapshot.queryParams || {};
 
-		const { parse, transform, initialValue, defaultValue, required } = options;
+		const { parse, defaultValue, required } = options;
 
 		if (!keyOrParamsTransform) {
 			return toSignal(route.queryParams, { initialValue: queryParams });
@@ -147,7 +132,7 @@ export function injectQueryParams<ReadT>(
 				if (required) {
 					throw missingRequiredParamError(keyOrParamsTransform);
 				}
-				return defaultValue ?? initialValue ?? null;
+				return defaultValue ?? null;
 			}
 
 			if (Array.isArray(param)) {
@@ -155,16 +140,12 @@ export function injectQueryParams<ReadT>(
 					if (required) {
 						throw missingRequiredParamError(keyOrParamsTransform);
 					}
-					return defaultValue ?? initialValue ?? null;
+					return defaultValue ?? null;
 				}
-				return parse
-					? parse(param[0])
-					: transform
-						? transform(param[0])
-						: param[0];
+				return parse ? parse(param[0]) : param[0];
 			}
 
-			return parse ? parse(param) : transform ? transform(param) : param;
+			return parse ? parse(param) : param;
 		};
 
 		return toSignal(route.queryParams.pipe(map(getParam)), {
@@ -229,8 +210,7 @@ export namespace injectQueryParams {
 			const route = inject(ActivatedRoute);
 			const queryParams = route.snapshot.queryParams || {};
 
-			const { parse, transform, initialValue, defaultValue, required } =
-				options;
+			const { parse, defaultValue, required } = options;
 
 			const transformParam = (
 				param: string | string[] | null,
@@ -239,14 +219,14 @@ export namespace injectQueryParams {
 					if (required) {
 						throw missingRequiredParamError(key);
 					}
-					return defaultValue ?? initialValue ?? null;
+					return defaultValue ?? null;
 				}
 				if (Array.isArray(param)) {
 					if (param.length < 1) {
 						if (required) {
 							throw missingRequiredParamError(key);
 						}
-						return defaultValue ?? initialValue ?? null;
+						return defaultValue ?? null;
 					}
 					// Avoid passing the parse function directly into the map function,
 					// because parse may inadvertently use the array index as its second argument.
@@ -254,13 +234,9 @@ export namespace injectQueryParams {
 					// which can conflict with parse functions like numberAttribute that expect a fallbackValue as their second parameter.
 					// This mismatch can lead to unexpected behavior, such as values being erroneously converted to array indices
 					// instead of NaN (which would be correct)
-					return parse
-						? param.map((it) => parse(it))
-						: transform
-							? param.map((it) => transform(it))
-							: param;
+					return parse ? param.map((it) => parse(it)) : param;
 				}
-				return [parse ? parse(param) : transform ? transform(param) : param];
+				return [parse ? parse(param) : param];
 			};
 
 			const getParam = (params: Params) => {
